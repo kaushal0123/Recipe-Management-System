@@ -71,7 +71,7 @@ Write a structured review:
 Respond in markdown format.
 """
     response = client.chat.completions.create(
-        model="mixtral-8x7b-32768",   # Groq’s fast LLM (change if you want LLaMA-3, Gemma, etc.)
+        model="llama-3.1-8b-instant",   # Groq’s fast LLM (change if you want LLaMA-3, Gemma, etc.)
         messages=[{"role": "user", "content": prompt}],
         temperature=0.3,
         max_tokens=500
