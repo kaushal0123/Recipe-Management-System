@@ -18,7 +18,7 @@ jobs:
           python-version: "3.10"
 
       - name: Install dependencies
-        run: pip install requests openai flake8
+        run: pip install requests google-generativeai flake8
 
       # 1️⃣ Run normal AI review
       - name: Run Normal PR review
@@ -26,7 +26,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python review_bot.py
 
       # 2️⃣ Run static analyzer
@@ -41,5 +41,5 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python review_bot.py --with-analyzer
