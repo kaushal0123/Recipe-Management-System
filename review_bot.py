@@ -21,7 +21,7 @@ headers = {
 
 # Gemini client setup
 genai.configure(api_key=gemini_key)
-model = genai.GenerativeModel("gemini-1.5-flash")  # or gemini-1.5-pro for better quality
+model = genai.GenerativeModel("models/gemini-1.5-flash")  # or gemini-1.5-pro for better quality
 
 # === GitHub API helpers ===
 def fetch_diff():
