@@ -26,24 +26,26 @@ steps:
       python-version: "3.10"
 
   - name: Install dependencies
-    # Installing groq, requests, flake8, and flake8-json (if needed)
     run: pip install groq requests flake8 flake8-json
 
-  # --- Static Analysis Phase (FIXED) ---
+  # --- Static Analysis Phase (ROBUST FIX) ---
   - name: Run Flake8 Static Analysis
+    # CRITICAL FIX: Use 'continue-on-error: true'. 
+    # This tells the GitHub Runner to ignore the exit code 1 from flake8 
+    # and proceed to the next steps, ensuring the report is available.
+    continue-on-error: true 
     run: |
       echo "Running flake8 analysis..."
-      # FIX: Adding '|| true' ensures the step passes even if Flake8 finds errors
-      # (which causes exit code 1) but still generates the report for the AI.
-      flake8 --format=json --output-file=flake8-report.json . || true
+      # The command remains clean, as 'continue-on-error' handles the failure
+      flake8 --format=json --output-file=flake8-report.json .
       echo "✅ Static analysis report generated: flake8-report.json"
 
   # --- 1. Base AI Review (No Analyzer Data) ---
   - name: Run Base AI Review
-    # Environment variables are inherited from the 'env' block
+    # This step will now execute even if Flake8 failed above.
     run: python review_bot.py
 
   # --- 2. Informed AI Review (With Analyzer Data) ---
   - name: Run AI Review Informed by Static Analysis
-    # Environment variables are inherited from the 'env' block
+    # This step will also execute, using the generated report.
     run: python review_bot.py --with-analyzer
