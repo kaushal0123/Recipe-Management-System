@@ -2,15 +2,15 @@ import os
 import json
 import requests
 import sys
-from openai import OpenAI
+import google.generativeai as genai
 
 # === Environment setup ===
 repo = os.getenv("GITHUB_REPOSITORY")
 pr_number = os.getenv("PR_NUMBER")
 token = os.getenv("GITHUB_TOKEN")
-openai_key = os.getenv("OPENAI_API_KEY")
+gemini_key = os.getenv("GEMINI_API_KEY")
 
-if not all([repo, pr_number, token, openai_key]):
+if not all([repo, pr_number, token, gemini_key]):
     raise SystemExit("❌ Missing required environment variables")
 
 headers = {
@@ -19,7 +19,9 @@ headers = {
     "User-Agent": "ai-pr-bot"
 }
 
-client = OpenAI(api_key=openai_key)
+# Gemini client setup
+genai.configure(api_key=gemini_key)
+model = genai.GenerativeModel("gemini-1.5-flash")  # or gemini-1.5-pro for better quality
 
 # === GitHub API helpers ===
 def fetch_diff():
@@ -57,16 +59,13 @@ def chunk_text(text, max_chars=3500):
         chunks.append("\n".join(current))
     return chunks
 
-# === LLM functions ===
+# === LLM Review ===
 def generate_review(diff_chunk: str, static_issues=None) -> str:
-    """Send chunk to LLM for review"""
+    """Send chunk to Gemini for review"""
+    analyzer_text = ""
     if static_issues:
-        issues_summary = "\n".join(
-            [f"- {issue}" for issue in static_issues[:10]]
-        )
+        issues_summary = "\n".join([f"- {issue}" for issue in static_issues[:10]])
         analyzer_text = f"\nStatic Analyzer Findings:\n{issues_summary}\n"
-    else:
-        analyzer_text = ""
 
     prompt = f"""
 You are an AI pull request reviewer.
@@ -79,19 +78,13 @@ Here is a code diff chunk from a PR:
 Write a structured review:
 - Briefly summarize what this chunk changes
 - Give at least 2 improvement suggestions
-- Mention any risks (bugs, performance, security)
+- Mention any risks (bugs, performance, or security)
 Respond in markdown format.
 """
+    response = model.generate_content(prompt)
+    return response.text.strip()
 
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.3,
-        max_tokens=600
-    )
-    return response.choices[0].message.content
-
-
+# === Static analyzer ===
 def load_static_issues():
     """Read flake8 static analysis output if present"""
     if not os.path.exists("flake8-report.json"):
@@ -102,12 +95,10 @@ def load_static_issues():
     issues = []
     for file, file_issues in data.items():
         for issue in file_issues:
-            issues.append(
-                f"{file}:{issue['line_number']} - {issue['text']}"
-            )
+            issues.append(f"{file}:{issue['line_number']} - {issue['text']}")
     return issues
 
-
+# === Main ===
 def main():
     with_analyzer = "--with-analyzer" in sys.argv
     mode = "Static Analyzer Mode" if with_analyzer else "Normal Mode"
@@ -126,7 +117,6 @@ def main():
         post_comment(f"### {prefix} (Part {i}/{len(chunks)})\n\n{review}")
 
     print("🎉 Review completed!")
-
 
 if __name__ == "__main__":
     main()
