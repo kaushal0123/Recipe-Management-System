@@ -1,44 +1,49 @@
 name: PR Reviewer Bot
 
 on:
-  pull_request:
-    types: [opened, synchronize]  # Trigger on PR open and update
+pull_request:
+types: [opened, synchronize] # Trigger on PR open and update
 
 jobs:
-  review:
-    name: Run PR AI Review
-    runs-on: ubuntu-latest
+review:
+name: Run PR AI Review
+runs-on: ubuntu-latest
 
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-      PR_NUMBER: ${{ github.event.pull_request.number }}
-      GITHUB_REPOSITORY: ${{ github.repository }}
+# Centralized environment variables for the entire job
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+  PR_NUMBER: ${{ github.event.pull_request.number }}
+  GITHUB_REPOSITORY: ${{ github.repository }}
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+steps:
+  - name: Checkout repository
+    uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.10"
+  - name: Set up Python
+    uses: actions/setup-python@v5
+    with:
+      python-version: "3.10"
 
-      - name: Install dependencies
-        # Including flake8-json for JSON output support
-        run: pip install groq requests flake8 flake8-json
+  - name: Install dependencies
+    # Installing groq, requests, flake8, and flake8-json (if needed)
+    run: pip install groq requests flake8 flake8-json
 
-      # --- Static Analysis Phase ---
-      - name: Run Flake8 Static Analysis
-        run: |
-          echo "Running flake8 analysis..."
-          flake8 --format=json --output-file=flake8-report.json .
-          echo "✅ Static analysis report generated: flake8-report.json"
+  # --- Static Analysis Phase (FIXED) ---
+  - name: Run Flake8 Static Analysis
+    run: |
+      echo "Running flake8 analysis..."
+      # FIX: Adding '|| true' ensures the step passes even if Flake8 finds errors
+      # (which causes exit code 1) but still generates the report for the AI.
+      flake8 --format=json --output-file=flake8-report.json . || true
+      echo "✅ Static analysis report generated: flake8-report.json"
 
-      # --- 1. Base AI Review (No Analyzer Data) ---
-      - name: Run Base AI Review
-        run: python review_bot.py
+  # --- 1. Base AI Review (No Analyzer Data) ---
+  - name: Run Base AI Review
+    # Environment variables are inherited from the 'env' block
+    run: python review_bot.py
 
-      # --- 2. Informed AI Review (With Analyzer Data) ---
-      - name: Run AI Review Informed by Static Analysis
-        run: python review_bot.py --with-analyzer
+  # --- 2. Informed AI Review (With Analyzer Data) ---
+  - name: Run AI Review Informed by Static Analysis
+    # Environment variables are inherited from the 'env' block
+    run: python review_bot.py --with-analyzer
