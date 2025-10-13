@@ -1,14 +1,16 @@
 import os
+import json
 import requests
-from groq import Groq   # Groq’s OpenAI-compatible client
+import sys
+from openai import OpenAI
 
 # === Environment setup ===
 repo = os.getenv("GITHUB_REPOSITORY")
 pr_number = os.getenv("PR_NUMBER")
-token = os.getenv("GITHUB_TOKEN") or os.getenv("BOT_TOKEN")  # fallback to PAT if needed
-groq_key = os.getenv("GROQ_API_KEY")
+token = os.getenv("GITHUB_TOKEN")
+openai_key = os.getenv("OPENAI_API_KEY")
 
-if not all([repo, pr_number, token, groq_key]):
+if not all([repo, pr_number, token, openai_key]):
     raise SystemExit("❌ Missing required environment variables")
 
 headers = {
@@ -17,8 +19,7 @@ headers = {
     "User-Agent": "ai-pr-bot"
 }
 
-# Groq client
-client = Groq(api_key=groq_key)
+client = OpenAI(api_key=openai_key)
 
 # === GitHub API helpers ===
 def fetch_diff():
@@ -36,14 +37,10 @@ def post_comment(body: str):
     """Post a comment on the PR"""
     url = f"https://api.github.com/repos/{repo}/issues/{pr_number}/comments"
     r = requests.post(url, headers=headers, json={"body": body})
-    if r.status_code == 403:
-        print("⚠️ Forbidden: Token may not have permission to comment on this PR (forked repo?).")
-        print(r.json())
-        return
     r.raise_for_status()
     print("✅ Comment posted successfully")
 
-# === Review logic ===
+# === Utility ===
 def chunk_text(text, max_chars=3500):
     """Split text into safe chunks"""
     lines = text.splitlines()
@@ -60,40 +57,76 @@ def chunk_text(text, max_chars=3500):
         chunks.append("\n".join(current))
     return chunks
 
-def generate_review(diff_chunk: str) -> str:
-    """Send one chunk to Groq LLM for review"""
+# === LLM functions ===
+def generate_review(diff_chunk: str, static_issues=None) -> str:
+    """Send chunk to LLM for review"""
+    if static_issues:
+        issues_summary = "\n".join(
+            [f"- {issue}" for issue in static_issues[:10]]
+        )
+        analyzer_text = f"\nStatic Analyzer Findings:\n{issues_summary}\n"
+    else:
+        analyzer_text = ""
+
     prompt = f"""
 You are an AI pull request reviewer.
-Here is a code diff chunk from a PR:
 
+Here is a code diff chunk from a PR:
 {diff_chunk}
+
+{analyzer_text}
 
 Write a structured review:
 - Briefly summarize what this chunk changes
 - Give at least 2 improvement suggestions
-- Note any risks (bugs, performance, security)
+- Mention any risks (bugs, performance, security)
 Respond in markdown format.
 """
+
     response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",   # ✅ supported Groq model
+        model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.3,
-        max_tokens=500
+        max_tokens=600
     )
     return response.choices[0].message.content
 
-def main():
-    print(f"🔍 Reviewing PR #{pr_number} in {repo} ...")
-    diff = fetch_diff()
 
+def load_static_issues():
+    """Read flake8 static analysis output if present"""
+    if not os.path.exists("flake8-report.json"):
+        return []
+    with open("flake8-report.json") as f:
+        data = json.load(f)
+
+    issues = []
+    for file, file_issues in data.items():
+        for issue in file_issues:
+            issues.append(
+                f"{file}:{issue['line_number']} - {issue['text']}"
+            )
+    return issues
+
+
+def main():
+    with_analyzer = "--with-analyzer" in sys.argv
+    mode = "Static Analyzer Mode" if with_analyzer else "Normal Mode"
+
+    print(f"🔍 Reviewing PR #{pr_number} in {repo} ({mode})...")
+
+    diff = fetch_diff()
     chunks = chunk_text(diff)
     print(f"📦 Split diff into {len(chunks)} chunks")
 
+    static_issues = load_static_issues() if with_analyzer else None
+
     for i, chunk in enumerate(chunks, start=1):
-        review = generate_review(chunk)
-        post_comment(f"### 🤖 AI Review (Part {i}/{len(chunks)})\n\n{review}")
+        review = generate_review(chunk, static_issues)
+        prefix = "🤖 AI Review" if not with_analyzer else "🧠 AI Review (with Static Analyzer)"
+        post_comment(f"### {prefix} (Part {i}/{len(chunks)})\n\n{review}")
 
     print("🎉 Review completed!")
+
 
 if __name__ == "__main__":
     main()
