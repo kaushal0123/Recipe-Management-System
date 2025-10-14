@@ -1,49 +1,29 @@
 name: PR Reviewer Bot
 
 on:
-pull_request:
-types: [opened, synchronize]
+  pull_request:
+    types: [opened, synchronize]
 
 jobs:
-review:
-runs-on: ubuntu-latest
+  review:
+    runs-on: ubuntu-latest
 
-steps:
-  - name: Checkout repository
-    uses: actions/checkout@v4
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-  - name: Set up Python
-    uses: actions/setup-python@v5
-    with:
-      python-version: "3.10"
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
 
-  - name: Install dependencies
-    # We only need 'requests' (for the Grok API call) and 'flake8'.
-    # Removed 'google-generativeai' to streamline the environment.
-    run: pip install requests flake8
+      - name: Install dependencies
+        run: pip install requests openai
 
-  # 1️⃣ Run normal AI review
-  - name: Run Normal PR review
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      PR_NUMBER: ${{ github.event.pull_request.number }}
-      GITHUB_REPOSITORY: ${{ github.repository }}
-      # CRITICAL CHANGE: Switched GEMINI_API_KEY to GROK_API_KEY
-      GROK_API_KEY: ${{ secrets.GROK_API_KEY }} 
-    run: python review_bot.py
-
-  # 2️⃣ Run static analyzer
-  - name: Run Flake8 Static Analysis
-    run: |
-      flake8 --format=json --output-file=flake8-report.json .
-      echo "✅ Static analysis completed"
-
-  # 3️⃣ Run AI review with static analyzer results
-  - name: Run PR review with static analyzer
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      PR_NUMBER: ${{ github.event.pull_request.number }}
-      GITHUB_REPOSITORY: ${{ github.repository }}
-      # CRITICAL CHANGE: Switched GEMINI_API_KEY to GROK_API_KEY
-      GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
-    run: python review_bot.py --with-analyzer
+      - name: Run PR reviewer
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: python review_bot.py
