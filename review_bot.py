@@ -1,14 +1,14 @@
 import os
 import requests
-from openai import OpenAI
+from groq import Groq  # 👈 use groq client instead of openai
 
 # === Environment setup ===
 repo = os.getenv("GITHUB_REPOSITORY")
 pr_number = os.getenv("PR_NUMBER")
 token = os.getenv("GITHUB_TOKEN")
-openai_key = os.getenv("OPENAI_API_KEY")
+groq_key = os.getenv("GROQ_API_KEY")  # 👈 change variable name
 
-if not all([repo, pr_number, token, openai_key]):
+if not all([repo, pr_number, token, groq_key]):
     raise SystemExit("❌ Missing required environment variables")
 
 headers = {
@@ -17,8 +17,8 @@ headers = {
     "User-Agent": "ai-pr-bot"
 }
 
-# OpenAI client
-client = OpenAI(api_key=openai_key)
+# === Groq client ===
+client = Groq(api_key=groq_key)
 
 # === GitHub API helpers ===
 def fetch_diff():
@@ -57,7 +57,7 @@ def chunk_text(text, max_chars=3500):
     return chunks
 
 def generate_review(diff_chunk: str) -> str:
-    """Send one chunk to LLM for review"""
+    """Send one chunk to Groq LLM for review"""
     prompt = f"""
 You are an AI pull request reviewer.
 Here is a code diff chunk from a PR:
@@ -71,7 +71,7 @@ Write a structured review:
 Respond in markdown format.
 """
     response = client.chat.completions.create(
-        model="gpt-4o-mini",   # use gpt-4o if available
+        model="llama-3.1-70b-versatile",  # 👈 Groq’s most powerful free model
         messages=[{"role": "user", "content": prompt}],
         temperature=0.3,
         max_tokens=500
