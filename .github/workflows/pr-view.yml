@@ -18,12 +18,12 @@ jobs:
           python-version: "3.10"
 
       - name: Install dependencies
-        run: pip install requests openai
+        run: pip install requests groq  # 👈 install groq SDK instead of openai
 
       - name: Run PR reviewer
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}  # 👈 new secret name
         run: python review_bot.py
