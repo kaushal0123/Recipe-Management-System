@@ -71,7 +71,7 @@ Write a structured review:
 Respond in markdown format.
 """
     response = client.chat.completions.create(
-        model="llama-3.1-70b-versatile",  # 👈 Groq’s most powerful free model
+        model="llama-3.1-8b-instant",  # 👈 Groq’s most powerful free model
         messages=[{"role": "user", "content": prompt}],
         temperature=0.3,
         max_tokens=500
