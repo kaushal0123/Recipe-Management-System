@@ -4,13 +4,15 @@ from groq import Groq
 # === Setup ===
 groq_key = os.getenv("GROQ_API_KEY")
 diff_path = os.getenv("DIFF_FILE", "diff.txt")
-output_path = os.getenv("OUTPUT_FILE", "review_output.md")
+output_dir = os.getenv("OUTPUT_DIR", "reviews")
 
 if not groq_key:
     raise SystemExit("❌ Missing GROQ_API_KEY environment variable")
 
 client = Groq(api_key=groq_key)
+os.makedirs(output_dir, exist_ok=True)
 
+# === Split diff safely ===
 def chunk_text(text, max_chars=3500):
     lines = text.splitlines()
     chunks, current = [], []
@@ -25,6 +27,7 @@ def chunk_text(text, max_chars=3500):
         chunks.append("\n".join(current))
     return chunks
 
+# === Ask AI model ===
 def generate_review(diff_chunk: str) -> str:
     prompt = f"""
 You are an AI pull request reviewer.
@@ -46,6 +49,7 @@ Respond in markdown format.
     )
     return response.choices[0].message.content
 
+# === Main logic ===
 def main():
     with open(diff_path, "r", encoding="utf-8") as f:
         diff = f.read()
@@ -53,15 +57,14 @@ def main():
     chunks = chunk_text(diff)
     print(f"📦 Split diff into {len(chunks)} chunks")
 
-    all_reviews = []
-    for i, chunk in enumerate(chunks, 1):
+    for i, chunk in enumerate(chunks, start=1):
         review = generate_review(chunk)
-        all_reviews.append(f"### 🤖 AI Review (Part {i}/{len(chunks)})\n\n{review}")
+        file_path = os.path.join(output_dir, f"review_part_{i}.md")
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(f"### 🤖 AI Review (Part {i}/{len(chunks)})\n\n{review}")
+        print(f"✅ Saved {file_path}")
 
-    with open(output_path, "w", encoding="utf-8") as f:
-        f.write("\n\n---\n\n".join(all_reviews))
-
-    print(f"✅ Review saved to {output_path}")
+    print("🎉 All reviews generated successfully!")
 
 if __name__ == "__main__":
     main()
