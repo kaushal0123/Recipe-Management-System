@@ -1,51 +1,20 @@
 import os
-import requests
-from groq import Groq  # 👈 use groq client instead of openai
+from groq import Groq
 
-# === Environment setup ===
-repo = os.getenv("GITHUB_REPOSITORY")
-pr_number = os.getenv("PR_NUMBER")
-token = os.getenv("GITHUB_TOKEN")
-groq_key = os.getenv("GROQ_API_KEY")  # 👈 change variable name
+# === Setup ===
+groq_key = os.getenv("GROQ_API_KEY")
+diff_path = os.getenv("DIFF_FILE", "diff.txt")
+output_path = os.getenv("OUTPUT_FILE", "review_output.md")
 
-if not all([repo, pr_number, token, groq_key]):
-    raise SystemExit("❌ Missing required environment variables")
+if not groq_key:
+    raise SystemExit("❌ Missing GROQ_API_KEY environment variable")
 
-headers = {
-    "Authorization": f"token {token}",
-    "Accept": "application/vnd.github.v3+json",
-    "User-Agent": "ai-pr-bot"
-}
-
-# === Groq client ===
 client = Groq(api_key=groq_key)
 
-# === GitHub API helpers ===
-def fetch_diff():
-    """Fetch PR diff text"""
-    url = f"https://api.github.com/repos/{repo}/pulls/{pr_number}"
-    r = requests.get(url, headers=headers)
-    r.raise_for_status()
-    diff_url = r.json()["diff_url"]
-
-    r2 = requests.get(diff_url, headers=headers)
-    r2.raise_for_status()
-    return r2.text
-
-def post_comment(body: str):
-    """Post a comment on the PR"""
-    url = f"https://api.github.com/repos/{repo}/issues/{pr_number}/comments"
-    r = requests.post(url, headers=headers, json={"body": body})
-    r.raise_for_status()
-    print("✅ Comment posted successfully")
-
-# === Review logic ===
 def chunk_text(text, max_chars=3500):
-    """Split text into safe chunks"""
     lines = text.splitlines()
     chunks, current = [], []
     length = 0
-
     for line in lines:
         if length + len(line) > max_chars:
             chunks.append("\n".join(current))
@@ -57,7 +26,6 @@ def chunk_text(text, max_chars=3500):
     return chunks
 
 def generate_review(diff_chunk: str) -> str:
-    """Send one chunk to Groq LLM for review"""
     prompt = f"""
 You are an AI pull request reviewer.
 Here is a code diff chunk from a PR:
@@ -71,7 +39,7 @@ Write a structured review:
 Respond in markdown format.
 """
     response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",  # 👈 Groq’s most powerful free model
+        model="llama-3.1-8b-instant",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.3,
         max_tokens=500
@@ -79,17 +47,21 @@ Respond in markdown format.
     return response.choices[0].message.content
 
 def main():
-    print(f"🔍 Reviewing PR #{pr_number} in {repo} ...")
-    diff = fetch_diff()
+    with open(diff_path, "r", encoding="utf-8") as f:
+        diff = f.read()
 
     chunks = chunk_text(diff)
     print(f"📦 Split diff into {len(chunks)} chunks")
 
-    for i, chunk in enumerate(chunks, start=1):
+    all_reviews = []
+    for i, chunk in enumerate(chunks, 1):
         review = generate_review(chunk)
-        post_comment(f"### 🤖 AI Review (Part {i}/{len(chunks)})\n\n{review}")
+        all_reviews.append(f"### 🤖 AI Review (Part {i}/{len(chunks)})\n\n{review}")
 
-    print("🎉 Review completed!")
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write("\n\n---\n\n".join(all_reviews))
+
+    print(f"✅ Review saved to {output_path}")
 
 if __name__ == "__main__":
     main()
