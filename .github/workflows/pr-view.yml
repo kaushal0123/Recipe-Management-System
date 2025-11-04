@@ -1,4 +1,4 @@
-name: PR Reviewer Bot
+name: AI PR Reviewer
 
 on:
   pull_request:
@@ -23,12 +23,26 @@ jobs:
           python-version: "3.10"
 
       - name: Install dependencies
-        run: pip install requests groq  # 👈 install groq SDK instead of openai
+        run: pip install groq
 
-      - name: Run PR reviewer
+      - name: Fetch PR diff
+        id: diff
+        run: |
+          echo "Fetching diff for PR #${{ github.event.pull_request.number }}..."
+          gh pr diff ${{ github.event.pull_request.number }} > diff.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}  # 👈 new secret name
-        run: python review_bot.py
+
+      - name: Run AI reviewer
+        run: python review.py
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          DIFF_FILE: diff.txt
+          OUTPUT_FILE: review_output.md
+
+      - name: Post AI review as PR comment
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body-file: review_output.md
