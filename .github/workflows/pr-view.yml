@@ -34,24 +34,8 @@ jobs:
           OWNER: kaushal0123
           REPO: Recipe-Management-System
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          GITHUB_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
           PINECONE_INDEX_NAME: ai
         run: python main.py
-
-      # 5️⃣ Check that GitHub CLI is installed
-      - name: Check gh installation
-        run: gh --version
-
-      # 6️⃣ Post the generated review comment to the PR
-      - name: Post AI Review Comment
-        if: success()
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
-        run: |
-          echo "📢 Posting AI review comment..."
-          # Find the latest generated .md file and post it
-          latest_file=$(ls -t review_*.md | head -n 1)
-          echo "Posting file: $latest_file"
-          gh pr comment ${{ github.event.pull_request.number }} --body-file "$latest_file"
