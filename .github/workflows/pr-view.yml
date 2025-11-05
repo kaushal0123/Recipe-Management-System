@@ -26,7 +26,7 @@ jobs:
 
       # 3️⃣ Install dependencies
       - name: Install dependencies
-        run: pip install -r Versions/Updated_version/requirements.txt
+        run: pip install requirements.txt
 
       # 4️⃣ Run the AI Reviewer system
       - name: Run Enhanced AI Reviewer (static + RAG + meta)
@@ -38,7 +38,7 @@ jobs:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
           PINECONE_INDEX_NAME: pullpanda-index
-        run: python Versions/Updated_version/main.py
+        run: python main.py
 
       #  5️⃣ (Optional) Upload generated reviews and reports as artifacts
       # - name: Upload AI Review Reports
