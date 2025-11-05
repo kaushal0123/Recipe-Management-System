@@ -1,8 +1,8 @@
-name: AI PR Reviewer Bot
+name: 🤖 AI PR Reviewer Bot (Updated Version)
 
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: read
@@ -14,34 +14,41 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1️⃣ Checkout the repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # 2️⃣ Set up Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
+      # 3️⃣ Install dependencies
       - name: Install dependencies
-        run: pip install groq
+        run: pip install -r Versions/Updated_version/requirements.txt
 
-      - name: Fetch PR diff
-        run: gh pr diff ${{ github.event.pull_request.number }} > diff.txt
+      # 4️⃣ Run the AI Reviewer system
+      - name: Run Enhanced AI Reviewer (static + RAG + meta)
         env:
+          OWNER: hetrank
+          REPO: PULL-PANDA
+          PR_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Run AI reviewer
-        run: python review_bot.py
-        env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          DIFF_FILE: diff.txt
-          OUTPUT_DIR: reviews
+          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+          PINECONE_INDEX_NAME: pullpanda-index
+        run: python Versions/Updated_version/main.py
 
-      - name: Post each AI review as PR comment
-        run: |
-          for file in reviews/*.md; do
-            echo "📤 Posting $file..."
-            gh pr comment ${{ github.event.pull_request.number }} --body-file "$file"
-          done
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #  5️⃣ (Optional) Upload generated reviews and reports as artifacts
+      # - name: Upload AI Review Reports
+      #   if: always()
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: ai-review-reports
+      #     path: |
+      #       review_*.md
+      #       review_reports_all_prompts_*.md
+      #       review_reports_all_prompts_*.csv
+      #       iterative_results_*.json
+      #       selector_state.json
