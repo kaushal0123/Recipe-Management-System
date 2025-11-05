@@ -1,0 +1,13 @@
+requests
+python-dotenv
+numpy
+scikit-learn
+langchain
+langchain-groq
+langchain-community
+langchain-text-splitters
+langchain-core
+langchain-huggingface
+sentence-transformers
+pinecone-client       
+langchain-pinecone     
