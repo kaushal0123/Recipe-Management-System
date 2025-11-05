@@ -17,13 +17,22 @@ from rag_core import get_retriever
 # ------------------------------
 # GitHub helpers (UNCHANGED)
 # ------------------------------
-def fetch_pr_diff() -> str:
-    diff_path = os.getenv("DIFF_FILE", "diff.txt")
-    if os.path.exists(diff_path):
-        print(f"📄 Using local diff file: {diff_path}")
-        with open(diff_path, "r", encoding="utf-8") as f:
-            return f.read()
-    raise FileNotFoundError("❌ Diff file not found — make sure DIFF_FILE is set.")
+
+def fetch_pr_diff(owner: str, repo: str, pr_number: int, token: Optional[str] = None) -> str:
+    token = token or GITHUB_TOKEN
+    url = f"https://api.github.com/repos/{owner}/{repo}/pulls/{pr_number}"
+    headers = {"Authorization": f"token {token}"}
+    resp = requests.get(url, headers=headers)
+    if resp.status_code != 200:
+        raise RuntimeError(f"GitHub API Error fetching PR: {resp.status_code} {resp.text}")
+    pr_data = resp.json()
+    diff_url = pr_data.get("diff_url")
+    if not diff_url:
+        raise RuntimeError("No diff_url found in PR data.")
+    diff_resp = requests.get(diff_url, headers=headers)
+    if diff_resp.status_code != 200:
+        raise RuntimeError(f"Failed to fetch diff: {diff_resp.status_code} {diff_resp.text}")
+    return diff_resp.text
 
 
 def post_review_comment(owner: str, repo: str, pr_number: int, review_body: str, token: Optional[str] = None) -> dict:
