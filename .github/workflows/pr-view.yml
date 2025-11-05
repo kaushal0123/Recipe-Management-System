@@ -31,8 +31,8 @@ jobs:
       # 4️⃣ Run the AI Reviewer system
       - name: Run Enhanced AI Reviewer (static + RAG + meta)
         env:
-          OWNER: hetrank
-          REPO: PULL-PANDA
+          OWNER: kaushal0123
+          REPO: Recipe-Management-System
           PR_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
