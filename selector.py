@@ -9,7 +9,7 @@ import numpy as np
 from datetime import datetime
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import StandardScaler
-from core import run_prompt, fetch_pr_diff, save_text_to_file
+from core import run_prompt, fetch_pr_diff, save_text_to_file , post_review_comment
 # --- MODIFIED: Import global score functions, not local ones ---
 from evaluation import heuristic_metrics, meta_to_score, heuristics_to_score 
 from prompts import get_prompts
@@ -299,6 +299,30 @@ def process_pr_with_selector(selector: IterativePromptSelector, pr_number: int, 
     
     # --- MODIFIED: pass static_output and context to save_results ---
     selector.save_results(pr_number, features, chosen, review, score, heur, meta_parsed, static_output, context)
+
+        # --- ✅ NEW: Post the AI Review Comment on GitHub ---
+    if post_to_github:
+        try:
+            review_body = f"""### 🤖 AI Review (Prompt: {chosen})
+**Score:** {score}/10
+
+{review}
+
+---
+
+🧩 **Static Analysis Summary:**
+{static_output[:1000]}...
+
+---
+
+📚 **Retrieved Context Summary:**
+{context[:1000]}...
+"""
+            post_review_comment(owner, repo, pr_number, review_body, token)
+            print(f"✅ Successfully posted AI review comment for PR #{pr_number}")
+        except Exception as e:
+            print(f"⚠️ Failed to post review comment for PR #{pr_number}: {e}")
+
     # ----------------------------------------------------
     
     return {
