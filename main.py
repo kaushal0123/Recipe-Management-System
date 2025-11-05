@@ -16,5 +16,5 @@ if __name__ == "__main__":
         print("Error: PR_NUMBER is not set or invalid in .env")
     else:
         print(f"Processing PR #{pr_num} using iterative selector...")
-        run_selector([pr_num])
+        run_selector([pr_num], post_to_github=True)
         print("Done! Review generated and selector state updated.")
