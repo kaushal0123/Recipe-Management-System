@@ -1,4 +1,4 @@
-name: 🤖 AI PR Reviewer Bot (Auto-Comment Fixed)
+name: 🤖 AI PR Reviewer Bot
 
 on:
   pull_request:
@@ -14,31 +14,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout your repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2️⃣ Set up Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
-      # 3️⃣ Install dependencies
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      # 4️⃣ Run your AI Reviewer system (creates review_*.md files)
-      - name: Run Enhanced AI Reviewer
+      - name: Run AI Reviewer
         env:
           OWNER: kaushal0123
           REPO: Recipe-Management-System
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          # 👇 Use GH_PAT if available, otherwise built-in GITHUB_TOKEN
-          GITHUB_TOKEN: ${{ secrets.GH_PAT != '' && secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}      # ✅ fixed
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
           PINECONE_INDEX_NAME: ai
         run: python main.py
-
-     
