@@ -22,7 +22,7 @@ import os
 
 import os
 
-def fetch_diff():
+def fetch_pr_diff():
     """Fetch PR diff text"""
     url = f"https://api.github.com/repos/{repo}/pulls/{pr_number}"
     r = requests.get(url, headers=headers)
