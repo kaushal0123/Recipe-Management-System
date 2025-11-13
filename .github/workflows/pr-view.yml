@@ -1,4 +1,4 @@
-name: 🤖 AI PR Reviewer (Optimized)
+name: 🤖 AI PR Reviewer (Ultra Optimized)
 
 on:
   pull_request:
@@ -12,38 +12,43 @@ permissions:
 jobs:
   review:
     runs-on: ubuntu-latest
-    timeout-minutes: 5  # Fail fast if it ever hangs
+    timeout-minutes: 5
 
     steps:
-      # 1️⃣ Checkout repo (only latest commit)
+      # 1️⃣ Checkout only latest commit
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
-      # 2️⃣ Cache Python dependencies
-      - name: Cache pip packages
+      # 2️⃣ Create Python virtual environment
+      - name: Create venv
+        run: python -m venv .venv
+
+      # 3️⃣ Cache the entire virtual environment (FASTEST APPROACH)
+      - name: Cache Python venv
         uses: actions/cache@v3
         with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
           restore-keys: |
-            ${{ runner.os }}-pip-
+            venv-${{ runner.os }}-
 
-      # 3️⃣ Set up Python 3.10
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.10"
-          cache: "pip"  # ✅ Built-in pip cache too
-
-      # 4️⃣ Install dependencies (fast)
-      - name: Install dependencies
+      # 4️⃣ Install dependencies ONLY IF not restored from cache
+      - name: Install dependencies (only if missing)
         run: |
+          source .venv/bin/activate
           pip install -r requirements.txt --quiet
           pip install semgrep --quiet
 
-      # 5️⃣ Warm up RAG retriever (fixed: includes all env vars)
+      # 5️⃣ Ensure HuggingFace + embeddings cached
+      - name: Cache HuggingFace & Embeddings
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/huggingface
+          key: huggingface-v1
+
+      # 6️⃣ Warm up RAG retriever (loads Pinecone index)
       - name: Warm up RAG retriever
         env:
           OWNER: kaushal0123
@@ -52,9 +57,11 @@ jobs:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
           PINECONE_INDEX_NAME: ai
-        run: python -c "from rag_core import get_retriever; get_retriever()"
+        run: |
+          source .venv/bin/activate
+          python -c "from rag_core import get_retriever; get_retriever()"
 
-      # 6️⃣ Run AI Reviewer (main PR analysis)
+      # 7️⃣ Run main AI reviewer
       - name: Run AI Reviewer
         env:
           OWNER: kaushal0123
@@ -64,11 +71,6 @@ jobs:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
           PINECONE_INDEX_NAME: ai
-        run: python main.py
-
-      # 7️⃣ Cache model data (HuggingFace embeddings)
-      - name: Cache LangChain & Embeddings
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/huggingface
-          key: ${{ runner.os }}-hf-${{ hashFiles('**/*.py') }}
+        run: |
+          source .venv/bin/activate
+          python main.py
