@@ -1,40 +1,32 @@
-name: review
+name: 🤖 AI PR Reviewer Bot
 
 on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
 jobs:
-  ai-review:
+  review:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 1  # Needed for PR context
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
-      - name: Cache pip dependencies
-        id: cache-pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
       - name: Install dependencies
-        if: steps.cache-pip.outputs.cache-hit != 'true'
         run: |
-          python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install semgrep
+
 
       - name: Run AI Reviewer
         env:
@@ -45,13 +37,4 @@ jobs:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
           PINECONE_INDEX_NAME: ai
-        run: python main.py
-
-      - name: Post Checkout repository
-        run: echo "Post-checkout:Repository ready"
-
-      - name: Post Set up Python
-        run: echo "Post-setup:Python 3.10 configured"
-
-      - name: Complete job
-        run: echo "AI Review completed successfully"
+        run: python main.py   # ✅ Correct spacing
