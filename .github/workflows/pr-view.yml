@@ -1,4 +1,4 @@
-name: 🤖 AI PR Reviewer (DEBUG MODE)
+name: 🤖 AI PR Reviewer (Ultra-Optimized)
 
 on:
   pull_request:
@@ -14,111 +14,119 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout repo
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
+    # 1️⃣ Checkout repo
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
 
-      # 2️⃣ Restore .venv cache
-      - name: Restore Python venv cache
-        id: cache-venv
-        uses: actions/cache@v3
-        with:
-          path: .venv
-          key: venv-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            venv-${{ runner.os }}-
 
-      # 3️⃣ DEBUG: Check if .venv exists after restore
-      - name: Debug - Check .venv after restore
-        run: |
-          echo "=== After cache restore ==="
-          if [ -d ".venv" ]; then
-            echo "YES → .venv directory exists"
-          else
-            echo "NO → .venv directory does NOT exist"
-          fi
+    # ---------------------------------------------------------
+    # 2️⃣ RESTORE HEAVY ML ENV (Torch + Transformers)
+    # ---------------------------------------------------------
+    - name: Restore ML venv cache
+      id: cache-ml
+      uses: actions/cache@v3
+      with:
+        path: .venv_ml
+        key: venv-ml-${{ runner.os }}-static
+        restore-keys: |
+          venv-ml-${{ runner.os }}-static
 
-          echo "=== List .venv ==="
-          ls -R .venv || echo ".venv is missing or empty"
 
-          echo "=== Show .venv size ==="
-          du -sh .venv || echo ".venv missing"
+    # 3️⃣ Create ML venv if not restored
+    - name: Create ML venv (if missing)
+      run: |
+        if [ ! -d ".venv_ml" ]; then
+          echo "Creating ML venv..."
+          python3 -m venv .venv_ml
+          source .venv_ml/bin/activate
+          echo "Installing heavy ML packages..."
+          pip install torch torchvision torchaudio --quiet --index-url https://download.pytorch.org/whl/cu121
+          pip install transformers sentence-transformers --quiet
+        else
+          echo "ML venv restored from cache."
+        fi
 
-      # 4️⃣ Setup Python
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.10"
 
-      # 5️⃣ If .venv exists → use it. If not → create it.
-      - name: Setup virtual environment
-        run: |
-          if [ ! -d ".venv" ]; then
-            echo "Creating new .venv"
-            python -m venv .venv
-          else
-            echo ".venv already exists → using cached one"
-          fi
+    # 4️⃣ Save ML venv (first PR only)
+    - name: Save ML cache
+      if: steps.cache-ml.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v3
+      with:
+        path: .venv_ml
+        key: venv-ml-${{ runner.os }}-static
 
-      # 6️⃣ Activate venv and show installed packages BEFORE install
-      - name: Debug - Packages BEFORE install
-        run: |
-          source .venv/bin/activate
-          echo "=== pip list BEFORE install ==="
-          pip list
-          echo "=== Package count BEFORE install ==="
-          pip list | wc -l
 
-      # 7️⃣ Install dependencies ONLY IF needed
-      - name: Install dependencies
-        run: |
-          source .venv/bin/activate
-          echo "=== Installing dependencies ==="
-          pip install -r requirements.txt --quiet
-          pip install semgrep --quiet
+    # ---------------------------------------------------------
+    # 5️⃣ RESTORE NORMAL venv (Fast deps)
+    # ---------------------------------------------------------
+    - name: Restore lightweight venv cache
+      id: cache-light
+      uses: actions/cache@v3
+      with:
+        path: .venv
+        key: venv-light-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
+        restore-keys: |
+          venv-light-${{ runner.os }}-
 
-      # 8️⃣ Debug - Packages AFTER install
-      - name: Debug - Packages AFTER install
-        run: |
-          source .venv/bin/activate
-          echo "=== pip list AFTER install ==="
-          pip list
-          echo "=== Package count AFTER install ==="
-          pip list | wc -l
 
-      # 9️⃣ Save updated cache
-      - name: Save Python venv cache
-        if: steps.cache-venv.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v3
-        with:
-          path: .venv
-          key: venv-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
+    # 6️⃣ Create normal venv if missing
+    - name: Create normal venv
+      run: |
+        if [ ! -d ".venv" ]; then
+          echo "Creating normal venv..."
+          python3 -m venv .venv
+        fi
 
-      # 🔟 Warm up RAG retriever (optional)
-      - name: Warm up RAG retriever
-        env:
-          OWNER: kaushal0123
-          REPO: Recipe-Management-System
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
-          PINECONE_INDEX_NAME: ai
-        run: |
-          source .venv/bin/activate
-          python -c "from rag_core import get_retriever; get_retriever()"
 
-      # 1️⃣1️⃣ Run main reviewer
-      - name: Run AI Reviewer
-        env:
-          OWNER: kaushal0123
-          REPO: Recipe-Management-System
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
-          PINECONE_INDEX_NAME: ai
-        run: |
-          source .venv/bin/activate
-          python main.py
+    # 7️⃣ Install only lightweight dependencies
+    - name: Install lightweight deps
+      run: |
+        source .venv/bin/activate
+        echo "Installing dependencies..."
+        pip install -r requirements.txt --quiet
+        pip install semgrep --quiet
+
+
+    # 8️⃣ Save lightweight cache
+    - name: Save lightweight venv cache
+      if: steps.cache-light.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v3
+      with:
+        path: .venv
+        key: venv-light-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
+
+
+    # ---------------------------------------------------------
+    # 9️⃣ Warm up RAG Retriever
+    # ---------------------------------------------------------
+    - name: Warm up RAG retriever
+      env:
+        OWNER: kaushal0123
+        REPO: Recipe-Management-System
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+        PINECONE_INDEX_NAME: ai
+      run: |
+        source .venv/bin/activate
+        python -c "from rag_core import get_retriever; get_retriever()"
+
+
+    # 🔟 Run your AI PR Reviewer
+    - name: Run AI Reviewer
+      env:
+        OWNER: kaushal0123
+        REPO: Recipe-Management-System
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+        PINECONE_INDEX_NAME: ai
+      run: |
+        # Activate both venvs (normal + ML)
+        source .venv/bin/activate
+        source .venv_ml/bin/activate
+
+        python main.py
