@@ -1,4 +1,4 @@
-name: 🤖 AI PR Reviewer (Ultra-Optimized CPU Torch)
+name: 🤖 AI PR Reviewer (Ultra-Optimized + CPU Torch + Merge Fix)
 
 on:
   pull_request:
@@ -12,7 +12,6 @@ permissions:
 jobs:
   review:
     runs-on: ubuntu-latest
-    timeout-minutes: 6
 
     steps:
     # 1️⃣ Checkout repo
@@ -35,29 +34,29 @@ jobs:
           venv-ml-${{ runner.os }}-static
 
 
-    # 3️⃣ Create ML venv if missing (install CPU Torch)
+    # 3️⃣ Create ML venv if missing (CPU Torch)
     - name: Create ML venv (if missing)
       run: |
         if [ ! -d ".venv_ml" ]; then
-          echo "ML venv not found. Creating it now..."
+          echo "ML venv not found. Creating..."
           python3 -m venv .venv_ml
           source .venv_ml/bin/activate
 
-          echo "Installing CPU version of PyTorch (small)..."
+          echo "Installing CPU PyTorch (small version)..."
           pip install --quiet \
             torch==2.3.0+cpu \
             torchvision==0.18.0+cpu \
             torchaudio==2.3.0+cpu \
             -f https://download.pytorch.org/whl/torch_stable.html
 
-          echo "Installing Transformers + Sentence Transformers..."
+          echo "Installing Transformers & Sentence Transformers..."
           pip install --quiet transformers sentence-transformers
         else
           echo "ML venv restored from cache."
         fi
 
 
-    # 4️⃣ Save ML venv cache (only when first created)
+    # 4️⃣ Save ML venv cache (only first PR)
     - name: Save ML venv cache
       if: steps.ml-cache.outputs.cache-hit != 'true'
       uses: actions/cache/save@v3
@@ -67,7 +66,7 @@ jobs:
 
 
     # ---------------------------------------------------------
-    # 5️⃣ RESTORE NORMAL venv (light deps)
+    # 5️⃣ RESTORE LIGHTWEIGHT venv
     # ---------------------------------------------------------
     - name: Restore lightweight venv cache
       id: light-cache
@@ -88,7 +87,7 @@ jobs:
         fi
 
 
-    # 7️⃣ Install only lightweight dependencies
+    # 7️⃣ Install lightweight dependencies
     - name: Install lightweight deps
       run: |
         source .venv/bin/activate
@@ -97,7 +96,7 @@ jobs:
         pip install semgrep --quiet
 
 
-    # 8️⃣ Save lightweight venv cache
+    # 8️⃣ Save lightweight cache
     - name: Save lightweight venv cache
       if: steps.light-cache.outputs.cache-hit != 'true'
       uses: actions/cache/save@v3
@@ -119,10 +118,11 @@ jobs:
         PINECONE_INDEX_NAME: ai
       run: |
         source .venv/bin/activate
+        export PYTHONPATH="$PYTHONPATH:$(pwd)/.venv_ml/lib/python3.10/site-packages"
         python -c "from rag_core import get_retriever; get_retriever()"
 
 
-    # 🔟 Run AI Reviewer
+    # 🔟 RUN AI REVIEWER (MERGED ENVIRONMENT)
     - name: Run AI Reviewer
       env:
         OWNER: kaushal0123
@@ -133,6 +133,13 @@ jobs:
         PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
         PINECONE_INDEX_NAME: ai
       run: |
+        # Activate lightweight venv
         source .venv/bin/activate
-        source .venv_ml/bin/activate
+        
+        # Merge ML venv into PYTHONPATH
+        export PYTHONPATH="$PYTHONPATH:$(pwd)/.venv_ml/lib/python3.10/site-packages"
+
+        echo "=== PYTHONPATH ==="
+        echo $PYTHONPATH
+
         python main.py
