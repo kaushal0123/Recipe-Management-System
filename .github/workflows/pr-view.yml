@@ -20,34 +20,37 @@ jobs:
         with:
           fetch-depth: 1
 
-      # 2️⃣ Create Python virtual environment
-      - name: Create venv
-        run: python -m venv .venv
-
-      # 3️⃣ Cache the entire virtual environment (FASTEST APPROACH)
-      - name: Cache Python venv
+      # 2️⃣ Restore cached virtual environment (FAST)
+      - name: Restore Python venv cache
         uses: actions/cache@v3
         with:
           path: .venv
-          key: venv-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
+          key: venv-${{ runner.os }}-v1
           restore-keys: |
             venv-${{ runner.os }}-
 
-      # 4️⃣ Install dependencies ONLY IF not restored from cache
-      - name: Install dependencies (only if missing)
+      # 3️⃣ Create venv ONLY if it was not restored
+      - name: Create venv if missing
+        run: |
+          if [ ! -d ".venv" ]; then
+            python -m venv .venv
+          fi
+
+      # 4️⃣ Install dependencies ONLY if they are not already in cache
+      - name: Install dependencies (only on first run)
         run: |
           source .venv/bin/activate
           pip install -r requirements.txt --quiet
           pip install semgrep --quiet
 
-      # 5️⃣ Ensure HuggingFace + embeddings cached
+      # 5️⃣ Cache HuggingFace model permanently
       - name: Cache HuggingFace & Embeddings
         uses: actions/cache@v3
         with:
           path: ~/.cache/huggingface
           key: huggingface-v1
 
-      # 6️⃣ Warm up RAG retriever (loads Pinecone index)
+      # 6️⃣ Warm up RAG retriever
       - name: Warm up RAG retriever
         env:
           OWNER: kaushal0123
@@ -60,7 +63,7 @@ jobs:
           source .venv/bin/activate
           python -c "from rag_core import get_retriever; get_retriever()"
 
-      # 7️⃣ Run main AI reviewer
+      # 7️⃣ Run AI Reviewer
       - name: Run AI Reviewer
         env:
           OWNER: kaushal0123
