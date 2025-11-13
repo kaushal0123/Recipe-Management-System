@@ -1,4 +1,4 @@
-name: 🤖 AI PR Reviewer (Ultra Optimized)
+name: 🤖 AI PR Reviewer (DEBUG MODE)
 
 on:
   pull_request:
@@ -12,45 +12,92 @@ permissions:
 jobs:
   review:
     runs-on: ubuntu-latest
+    timeout-minutes: 6
 
     steps:
-      # 1️⃣ Checkout only latest commit
+      # 1️⃣ Checkout repo
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
-      # 2️⃣ Restore cached virtual environment (FAST)
+      # 2️⃣ Restore .venv cache
       - name: Restore Python venv cache
+        id: cache-venv
         uses: actions/cache@v3
         with:
           path: .venv
-          key: venv-${{ runner.os }}-v1
+          key: venv-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
           restore-keys: |
             venv-${{ runner.os }}-
 
-      # 3️⃣ Create venv ONLY if it was not restored
-      - name: Create venv if missing
+      # 3️⃣ DEBUG: Check if .venv exists after restore
+      - name: Debug - Check .venv after restore
         run: |
-          if [ ! -d ".venv" ]; then
-            python -m venv .venv
+          echo "=== After cache restore ==="
+          if [ -d ".venv" ]; then
+            echo "YES → .venv directory exists"
+          else
+            echo "NO → .venv directory does NOT exist"
           fi
 
-      # 4️⃣ Install dependencies ONLY if they are not already in cache
-      - name: Install dependencies (only on first run)
+          echo "=== List .venv ==="
+          ls -R .venv || echo ".venv is missing or empty"
+
+          echo "=== Show .venv size ==="
+          du -sh .venv || echo ".venv missing"
+
+      # 4️⃣ Setup Python
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      # 5️⃣ If .venv exists → use it. If not → create it.
+      - name: Setup virtual environment
+        run: |
+          if [ ! -d ".venv" ]; then
+            echo "Creating new .venv"
+            python -m venv .venv
+          else
+            echo ".venv already exists → using cached one"
+          fi
+
+      # 6️⃣ Activate venv and show installed packages BEFORE install
+      - name: Debug - Packages BEFORE install
         run: |
           source .venv/bin/activate
+          echo "=== pip list BEFORE install ==="
+          pip list
+          echo "=== Package count BEFORE install ==="
+          pip list | wc -l
+
+      # 7️⃣ Install dependencies ONLY IF needed
+      - name: Install dependencies
+        run: |
+          source .venv/bin/activate
+          echo "=== Installing dependencies ==="
           pip install -r requirements.txt --quiet
           pip install semgrep --quiet
 
-      # 5️⃣ Cache HuggingFace model permanently
-      - name: Cache HuggingFace & Embeddings
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/huggingface
-          key: huggingface-v1
+      # 8️⃣ Debug - Packages AFTER install
+      - name: Debug - Packages AFTER install
+        run: |
+          source .venv/bin/activate
+          echo "=== pip list AFTER install ==="
+          pip list
+          echo "=== Package count AFTER install ==="
+          pip list | wc -l
 
-      # 6️⃣ Warm up RAG retriever
+      # 9️⃣ Save updated cache
+      - name: Save Python venv cache
+        if: steps.cache-venv.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v3
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
+
+      # 🔟 Warm up RAG retriever (optional)
       - name: Warm up RAG retriever
         env:
           OWNER: kaushal0123
@@ -63,7 +110,7 @@ jobs:
           source .venv/bin/activate
           python -c "from rag_core import get_retriever; get_retriever()"
 
-      # 7️⃣ Run AI Reviewer
+      # 1️⃣1️⃣ Run main reviewer
       - name: Run AI Reviewer
         env:
           OWNER: kaushal0123
