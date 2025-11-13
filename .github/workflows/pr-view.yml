@@ -13,7 +13,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Needed for PR context
+          fetch-depth: 1  # Needed for PR context
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -48,10 +48,10 @@ jobs:
         run: python main.py
 
       - name: Post Checkout repository
-        run: echo "Post-checkout: Repository ready"
+        run: echo "Post-checkout:Repository ready"
 
       - name: Post Set up Python
-        run: echo "Post-setup: Python 3.10 configured"
+        run: echo "Post-setup:Python 3.10 configured"
 
       - name: Complete job
         run: echo "AI Review completed successfully"
