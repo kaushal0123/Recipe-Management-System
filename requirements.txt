@@ -9,5 +9,6 @@ langchain-text-splitters
 langchain-core
 langchain-huggingface
 sentence-transformers
-pinecone-client       
-langchain-pinecone     
+pinecone-client
+langchain-pinecone
+semgrep
