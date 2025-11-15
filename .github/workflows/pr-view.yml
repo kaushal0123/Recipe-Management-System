@@ -14,37 +14,30 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # -----------------------------------------------------
-      # Checkout
-      # -----------------------------------------------------
-      - id: checkout
-        name: Checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
       # -----------------------------------------------------
-      # Python Setup + Built-in pip cache
+      # CACHE (picture method)
       # -----------------------------------------------------
-      - id: setup_python
-        name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Cache pip packages
+        id: pipcache        # important: used in IF condition
+        uses: actions/cache@v4
         with:
-          python-version: "3.10"
-          cache: "pip"                       # <-- use built-in caching
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            pip-${{ runner.os }}-
 
-      # -----------------------------------------------------
-      # Install Python dependencies
-      # -----------------------------------------------------
-      - id: install_deps
-        name: Install dependencies
+      
+      - name: Install dependencies
+        if: steps.pipcache.outputs.cache-hit != 'true'
         run: pip install -r requirements.txt
 
-      # -----------------------------------------------------
-      # Run Reviewer Script
-      # -----------------------------------------------------
-      - id: run_reviewer
-        name: Run AI Reviewer
+     
+      - name: Run AI Reviewer
         env:
           OWNER: kaushal0123
           REPO: Recipe-Management-System
