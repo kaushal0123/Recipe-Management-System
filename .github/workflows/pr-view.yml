@@ -20,23 +20,27 @@ jobs:
           fetch-depth: 1
 
       # -----------------------------------------------------
-      # CACHE (picture method)
+      # RESTORE ONLY – never saves a new cache
       # -----------------------------------------------------
-      - name: Cache pip packages
-        id: pipcache        # important: used in IF condition
-        uses: actions/cache@v4
+      - name: Restore pip cache (restore only)
+        uses: actions/cache/restore@v4
+        id: pipcache
         with:
           path: ~/.cache/pip
           key: pip-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
           restore-keys: |
             pip-${{ runner.os }}-
 
-      
+      # -----------------------------------------------------
+      # Install deps if no cache found
+      # -----------------------------------------------------
       - name: Install dependencies
         if: steps.pipcache.outputs.cache-hit != 'true'
         run: pip install -r requirements.txt
 
-     
+      # -----------------------------------------------------
+      # Run AI reviewer
+      # -----------------------------------------------------
       - name: Run AI Reviewer
         env:
           OWNER: kaushal0123
