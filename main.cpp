@@ -3,15 +3,6 @@
 #include <fstream>
 #include <sstream>
 using namespace std;
-class recipe{
-    public :
-        string name;
-        string ingredients[100];
-        int calories;
-        string category;
-        recipe* next;
-        int n1;
-};
 void dis(string s1);
 void disp(recipe* current){
     cout << "Ingredients Name : ";
