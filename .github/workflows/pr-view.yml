@@ -20,28 +20,38 @@ jobs:
           fetch-depth: 1
 
       # -----------------------------------------------------
-      # RESTORE ONLY – never saves a new cache
+      # RESTORE AND SAVE (The standard efficient way)
       # -----------------------------------------------------
-      - name: Restore pip cache (restore only)
-        uses: actions/cache/restore@v4
-        id: pipcache
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        id: pip-cache
         with:
           path: ~/.cache/pip
+          # The key uses a hash of the requirements file content
           key: pip-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
           restore-keys: |
             pip-${{ runner.os }}-
 
       # -----------------------------------------------------
-      # Install deps if no cache found
+      # Install dependencies only if full cache missed OR 
+      # to pick up incremental changes using the restored cache
       # -----------------------------------------------------
-      - name: Install dependencies
-        if: steps.pipcache.outputs.cache-hit != 'true'
-        run: pip install -r requirements.txt
+      - name: Install dependencies incrementally
+        # The 'if' condition is optional here if you want it to always check for updates, 
+        # but leaving it in ensures a full skip if requirements.txt hasn't changed.
+        if: steps.pip-cache.outputs.cache-hit != 'true'
+        run: |
+          echo "Installing/Updating dependencies..."
+          pip install -r requirements.txt
+        env:
+          # Explicitly set the cache directory environment variable for pip
+          PIP_CACHE_DIR: ~/.cache/pip
 
       # -----------------------------------------------------
       # Run AI reviewer
       # -----------------------------------------------------
       - name: Run AI Reviewer
+        # ... (your env variables) ...
         env:
           OWNER: kaushal0123
           REPO: Recipe-Management-System
