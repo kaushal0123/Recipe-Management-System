@@ -1,4 +1,4 @@
-name: 🤖 AI PR Reviewer Bot
+name: PR Reviewer Bot
 
 on:
   pull_request:
@@ -16,48 +16,32 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
 
-      # -----------------------------------------------------
-      # RESTORE AND SAVE (The standard efficient way)
-      # -----------------------------------------------------
-      - name: Cache pip packages
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      # ------------------------------------------------------
+      #             🚀 DEPENDENCY CACHE USING requirements.txt
+      # ------------------------------------------------------
+      - name: Cache pip dependencies
         uses: actions/cache@v4
-        id: pip-cache
         with:
           path: ~/.cache/pip
-          # The key uses a hash of the requirements file content
           key: pip-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
           restore-keys: |
             pip-${{ runner.os }}-
 
-      # -----------------------------------------------------
-      # Install dependencies only if full cache missed OR 
-      # to pick up incremental changes using the restored cache
-      # -----------------------------------------------------
-      - name: Install dependencies incrementally
-        # The 'if' condition is optional here if you want it to always check for updates, 
-        # but leaving it in ensures a full skip if requirements.txt hasn't changed.
-        if: steps.pip-cache.outputs.cache-hit != 'true'
-        run: |
-          echo "Installing/Updating dependencies..."
-          pip install -r requirements.txt
-        env:
-          # Explicitly set the cache directory environment variable for pip
-          PIP_CACHE_DIR: ~/.cache/pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
 
-      # -----------------------------------------------------
-      # Run AI reviewer
-      # -----------------------------------------------------
-      - name: Run AI Reviewer
-        # ... (your env variables) ...
+      # ------------------------------------------------------
+
+      - name: Run PR reviewer
         env:
-          OWNER: kaushal0123
-          REPO: Recipe-Management-System
-          PR_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
-          PINECONE_INDEX_NAME: ai
-        run: python main.py
+        run: python review_bot.py
