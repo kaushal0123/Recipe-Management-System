@@ -39,12 +39,12 @@ name: AI PR Reviewer
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened] # Runs when a PR is opened or updated
+    types: [opened, synchronize, reopened]
 
 permissions:
-  contents: read          # To check out the code
-  pull-requests: write  # To post the review comment
-  issues: write           # PRs are technically 'issues' for commenting
+  contents: read
+  pull-requests: write
+  issues: write
 
 jobs:
   review:
@@ -57,26 +57,30 @@ jobs:
       - name: Set up Python 3.10
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
-          cache: 'pip' # <-- This is the key. It enables caching.
+          python-version: "3.10" # <- 1. CHANGE THIS (if you use a different Python version)
+
+      - name: Configure and restore pip cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('/requirements.txt') }} # <- 2. CHANGE THIS (if your file isn't named requirements.txt)
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements.txt # <- 2. CHANGE THIS (if your file path is different)
 
       - name: Run AI Review
         env:
-          # --- GitHub Secrets ---
-          # These must be set in your Repo > Settings > Secrets > Actions
+          # --- GitHub Secrets (Must be set in Repo > Settings > Secrets) ---
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
-          PINECONE_INDEX_NAME: "your-index-name" # Set this in secrets or hardcode it
+          PINECONE_INDEX_NAME: "your-index-name" # <- 3. CHANGE THIS to your real Pinecone index name
 
-          # --- GitHub Context ---
-          # These are passed automatically to your config.py file
+          # --- GitHub Context (No changes needed) ---
           PR_NUMBER: ${{ github.event.pull_request.number }}
           OWNER: ${{ github.repository_owner }}
           REPO: ${{ github.event.repository.name }}
           
-        # This should be your main Python script that runs the review
-        run: python main.py
+        run: python main.py # <- 4. CHANGE THIS to the name of your main script
