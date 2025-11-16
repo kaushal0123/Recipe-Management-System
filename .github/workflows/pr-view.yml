@@ -1,35 +1,82 @@
-name: PR Reviewer Bot
+# name: PR Reviewer Bot
+
+# on:
+#   pull_request:
+#     types: [opened, synchronize, reopened]
+
+# permissions:
+#   contents: read
+#   pull-requests: write
+#   issues: write
+  
+
+# jobs:
+#   review:
+#     runs-on: ubuntu-latest
+
+#     steps:
+#       - name: Checkout repository
+#         uses: actions/checkout@v4
+
+#       - name: Set up Python
+#         uses: actions/setup-python@v5
+#         with:
+#           python-version: "3.10"
+
+#       - name: Install dependencies
+#         run: pip install -r requirements.txt
+
+#       - name: Run PR reviewer
+#         env:
+#           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#           PR_NUMBER: ${{ github.event.pull_request.number }}
+#           GITHUB_REPOSITORY: ${{ github.repository }}
+#           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+#         run: python main.py
+
+
+name: AI PR Reviewer
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened] # Runs when a PR is opened or updated
 
 permissions:
-  contents: read
-  pull-requests: write
-  issues: write
-  
+  contents: read          # To check out the code
+  pull-requests: write  # To post the review comment
+  issues: write           # PRs are technically 'issues' for commenting
 
 jobs:
   review:
     runs-on: ubuntu-latest
-
+    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python 3.10
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
+          cache: 'pip' # <-- This is the key. It enables caching.
 
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run PR reviewer
+      - name: Run AI Review
         env:
+          # --- GitHub Secrets ---
+          # These must be set in your Repo > Settings > Secrets > Actions
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+          PINECONE_INDEX_NAME: "your-index-name" # Set this in secrets or hardcode it
+
+          # --- GitHub Context ---
+          # These are passed automatically to your config.py file
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name }}
+          
+        # This should be your main Python script that runs the review
         run: python main.py
