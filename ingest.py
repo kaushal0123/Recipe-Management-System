@@ -141,20 +141,51 @@ def ingest_data():
     embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
 
     # --- 5. Connect to Pinecone and Check Index (UNCHANGED) ---
-    print("Initializing Pinecone client...")
-    pc = Pinecone(api_key=PINECONE_API_KEY)
+    # --- 5. Connect to Pinecone and Auto-Fix Index Dimension ---
+print("Initializing Pinecone client...")
+pc = Pinecone(api_key=PINECONE_API_KEY)
 
-    if PINECONE_INDEX_NAME not in pc.list_indexes().names():
-        print(f"Index '{PINECONE_INDEX_NAME}' not found. Creating new index...")
+index_list = pc.list_indexes().names()
+
+if PINECONE_INDEX_NAME in index_list:
+    print(f"Index '{PINECONE_INDEX_NAME}' already exists. Checking dimension...")
+
+    try:
+        index_info = pc.describe_index(PINECONE_INDEX_NAME)
+        existing_dim = index_info.get("dimension")
+    except Exception as e:
+        print(f"Error getting index metadata: {e}")
+        existing_dim = None
+
+    print(f"Existing index dimension: {existing_dim}")
+    print(f"Required embedding dimension: {EMBEDDING_DIMENSION}")
+
+    # FIX DIMENSION AUTOMATICALLY
+    if existing_dim != EMBEDDING_DIMENSION:
+        print("❌ Dimension mismatch! Auto-fixing index...")
+        pc.delete_index(PINECONE_INDEX_NAME)
+
+        print("Creating new index with correct dimension...")
         pc.create_index(
             name=PINECONE_INDEX_NAME,
             dimension=EMBEDDING_DIMENSION,
-            metric="cosine", 
+            metric="cosine",
             spec=ServerlessSpec(cloud="aws", region="us-east-1"),
         )
-        print("Index created.")
+        print("✅ Index recreated successfully!")
     else:
-        print(f"Found existing index '{PINECONE_INDEX_NAME}'.")
+        print("✔ Dimensions match. Using existing index.")
+
+else:
+    print(f"Index '{PINECONE_INDEX_NAME}' not found. Creating new one...")
+    pc.create_index(
+        name=PINECONE_INDEX_NAME,
+        dimension=EMBEDDING_DIMENSION,
+        metric="cosine",
+        spec=ServerlessSpec(cloud="aws", region="us-east-1"),
+    )
+    print("Index created.")
+
 
     # --- 6. Upload to Pinecone (UNCHANGED) ---
     print(f"Uploading {len(all_texts)} chunks to Pinecone index...")
