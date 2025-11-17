@@ -9,7 +9,7 @@ on:
 
 env:
   # USER-FRIENDLY DURATION SETTING
-  DURATION: "3 days"        # <-- change this to "24 hours", "7 days", "48 hours", etc.
+  DURATION: "24 hours"        # <-- change this to "24 hours", "7 days", "48 hours", etc.
  
 jobs:
   ingest_if_pr:
