@@ -5,7 +5,7 @@
 from selector_runner import run_selector
 from config import PR_NUMBER
 
-if _name_ == "_main_":
+if __name__ == "__main__":
     # --- MODIFIED: Safely convert PR_NUMBER to an integer ---
     try:
         pr_num = int(PR_NUMBER)
