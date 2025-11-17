@@ -1,0 +1,60 @@
+name: 🔄 User-Friendly Ingest (Dynamic Duration)
+
+on:
+  schedule:
+    # Cron must be fixed. For example: run every day at 2 AM UTC
+    - cron: "0 2 * * *"
+
+  workflow_dispatch:
+
+env:
+  # USER-FRIENDLY DURATION SETTING
+  DURATION: "3 days"        # <-- change this to "24 hours", "7 days", "48 hours", etc.
+ 
+jobs:
+  ingest_if_pr:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check if PR created in last $DURATION
+        id: check_pr
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Checking PRs opened in last $DURATION..."
+
+          since=$(date -u -d "$DURATION ago" +"%Y-%m-%dT%H:%M:%SZ")
+
+          echo "Since time: $since"
+
+          prs=$(curl -s \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls?state=open&sort=created&direction=desc")
+
+          count=$(echo "$prs" | jq --arg since "$since" '[.[] | select(.created_at > $since)] | length')
+
+          echo "PR count in last $DURATION: $count"
+          echo "pr_count=$count" >> $GITHUB_OUTPUT
+
+      - name: Install dependencies
+        if: steps.check_pr.outputs.pr_count != '0'
+        run: |
+          pip install -r requirements.txt
+          pip install pinecone-client langchain-pinecone
+
+      - name: Run ingest.py
+        if: steps.check_pr.outputs.pr_count != '0'
+        env:
+          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+          PINECONE_INDEX_NAME: ai
+        run: |
+          echo "Running ingest because PR was created in the last $DURATION."
+          python ingest.py
+
+      - name: Skip ingestion
+        if: steps.check_pr.outputs.pr_count == '0'
+        run: |
+          echo "No PR created in last $DURATION. Skipping ingestion."
