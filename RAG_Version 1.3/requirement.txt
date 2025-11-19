@@ -1,7 +1,12 @@
-# requirements.txt
+# ============================================================
+# Project dependencies
+# ============================================================
+
 requests
+python-dotenv
 numpy
 scikit-learn
+
 langchain
 langchain-groq
 langchain-community
@@ -9,6 +14,35 @@ langchain-text-splitters
 langchain-core
 langchain-huggingface
 sentence-transformers
+
 pinecone-client
 langchain-pinecone
+
 GitPython
+
+# ============================================================
+# Static Analysis Tools (Python-based analyzers)
+# These WILL be installed by pip
+# ============================================================
+
+pylint
+flake8
+bandit
+mypy
+
+# ============================================================
+# Static Analysis Tools (NOT installable via pip)
+# These MUST be installed manually using apt/npm/rustup/go
+# ============================================================
+
+ eslint   
+ checkstyle       
+ cppcheck     
+ staticcheck          
+ clippy           
+
+# ------------------------------------------------------------
+# NOTE:
+# Lines above are comments because pip **cannot** install them.
+# GitHub Actions must install those tools manually.
+# ------------------------------------------------------------
