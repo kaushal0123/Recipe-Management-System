@@ -1,59 +1,172 @@
-name: 🔄 User-Friendly Ingest (Dynamic Duration)
+name: 🔄 Ingest — Dynamic + Friendly (Auto-PR Based)
 
 on:
   schedule:
-    - cron: "0 2 * * *"
+    - cron: "0 2 * * *"   # fallback: run daily at 2 AM UTC
   workflow_dispatch:
+    inputs:
+      mode:
+        description: "manual = use input times, auto = ignore inputs and use fallback schedule"
+        type: choice
+        default: manual
+        options:
+          - manual
+          - auto
 
-env:
-  DURATION: "24 hours"
+      frequency:
+        description: "daily or weekly schedule for manual mode"
+        type: choice
+        default: daily
+        options:
+          - daily
+          - weekly
+
+      times_ist:
+        description: "Comma-separated IST times (e.g., 01:00,07:30,18:00). Only for manual mode."
+        required: false
+        default: "06:00"
+
+      day_list:
+        description: "Comma-separated days (monday,tuesday...). Only used when frequency=weekly."
+        required: false
+        default: "monday"
+
+      force:
+        description: "Force run ingest now (true/false)"
+        type: boolean
+        default: false
 
 jobs:
-  ingest_if_pr:
+  prepare:
     runs-on: ubuntu-latest
+    outputs:
+      cron_list: ${{ steps.schedule.outputs.cron_list }}
+    steps:
+      - name: Generate cron schedule (IST → UTC)
+        id: schedule
+        run: |
+          freq="${{ github.event.inputs.frequency }}"
+          times_raw="${{ github.event.inputs.times_ist }}"
+          days_raw="${{ github.event.inputs.day_list }}"
 
+          if [ -z "$times_raw" ]; then
+            times_raw="06:00"
+          fi
+
+          IFS=',' read -ra TIMES <<< "$times_raw"
+          IFS=',' read -ra DAYS <<< "$days_raw"
+
+          declare -A DAYMAP=( \
+            [sunday]=0 [monday]=1 [tuesday]=2 [wednesday]=3 \
+            [thursday]=4 [friday]=5 [saturday]=6 )
+
+          cron_list=""
+
+          for rawtime in "${TIMES[@]}"; do
+            t_trim=$(echo "$rawtime" | xargs)
+
+            if ! echo "$t_trim" | grep -Eq '^[0-2][0-9]:[0-5][0-9]$'; then
+              echo "Skipping invalid time: $t_trim"
+              continue
+            fi
+
+            # IST → UTC conversion
+            utc=$(date -u -d "today $t_trim IST -5 hours -30 minutes" +"%M %H")
+            minute=$(echo "$utc" | cut -d" " -f1)
+            hour=$(echo "$utc" | cut -d" " -f2)
+
+            if [ "$freq" = "daily" ]; then
+              cron_list="$cron_list,$minute $hour * * *"
+            else
+              for d in "${DAYS[@]}"; do
+                d_trim=$(echo "$d" | tr '[:upper:]' '[:lower:]' | xargs)
+                dnum=${DAYMAP[$d_trim]}
+
+                cron_list="$cron_list,$minute $hour * * $dnum"
+              done
+            fi
+          done
+
+          cron_list="${cron_list#,}"
+          echo "cron_list=$cron_list" >> $GITHUB_OUTPUT
+
+  run_ingest:
+    needs: prepare
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Check if PR created in last $DURATION
-        id: check_pr
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Show schedule info
         run: |
-          echo "Checking PRs opened in last $DURATION..."
+          echo "Mode: ${{ github.event.inputs.mode }}"
+          echo "Generated cron: ${{ needs.prepare.outputs.cron_list }}"
+          echo "Force: ${{ github.event.inputs.force }}"
 
-          since=$(date -u -d "$DURATION ago" +"%Y-%m-%dT%H:%M:%SZ")
+      - name: Decide whether to run ingest (auto last-run logic)
+        id: decide
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          FORCE="${{ github.event.inputs.force }}"
+
+          if [ "$FORCE" = "true" ]; then
+            echo "run_now=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "Fetching last successful ingest run timestamp..."
+
+          last_run=$(curl -s \
+            -H "Authorization: token $GH_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/ingest_dynamic.yml/runs?status=success&per_page=1" \
+            | jq -r '.workflow_runs[0].run_started_at')
+
+          echo "Last run: $last_run"
+
+          if [ "$last_run" = "null" ] || [ -z "$last_run" ]; then
+            echo "No previous successful runs — running ingest."
+            echo "run_now=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "Checking if new PRs exist after: $last_run"
 
           prs=$(curl -s \
-            -H "Authorization: token $GITHUB_TOKEN" \
-            "https://api.github.com/repos/${{ github.repository }}/pulls?state=open&sort=created&direction=desc")
+            -H "Authorization: token $GH_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls?state=open&per_page=100")
 
-          count=$(echo "$prs" | jq --arg since "$since" '[.[] | select(.created_at > $since)] | length')
+          new_prs=$(echo "$prs" | jq --arg lr "$last_run" \
+            '[.[] | select(.created_at > $lr)] | length')
 
-          echo "pr_count=$count" >> $GITHUB_OUTPUT
+          echo "New PR count: $new_prs"
+
+          if [ "$new_prs" -gt 0 ]; then
+            echo "run_now=true" >> $GITHUB_OUTPUT
+          else
+            echo "run_now=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Install dependencies
-        if: steps.check_pr.outputs.pr_count != '0'
+        if: steps.decide.outputs.run_now == 'true'
         run: |
           pip install -r requirements.txt
           pip install pinecone-client langchain-pinecone
 
       - name: Run ingest.py
-        if: steps.check_pr.outputs.pr_count != '0'
+        if: steps.decide.outputs.run_now == 'true'
         env:
           OWNER: ${{ github.repository_owner }}
           REPO: ${{ github.event.repository.name }}
-
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-
           PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
           PINECONE_INDEX_NAME: ai
         run: |
-          echo "Running ingest because PR was created in the last $DURATION."
+          echo "Running ingest.py..."
           python ingest.py
 
-      - name: Skip ingestion
-        if: steps.check_pr.outputs.pr_count == '0'
-        run: echo "No PR created in last $DURATION. Skipping ingestion."
+      - name: Skip ingest
+        if: steps.decide.outputs.run_now == 'false'
+        run: |
+          echo "No new PRs since last run — skipping ingest."
