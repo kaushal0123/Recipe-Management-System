@@ -110,7 +110,7 @@ jobs:
           python "RAG_Version 1.3/ingest.py"
 
           echo "Running PR reviewer..."
-          python "RAG_Version 1.3/iterative_prompt_selector.py"ne
+          python "RAG_Version 1.3/iterative_prompt_selector.py"
 
       # -----------------------------------------------------
       # 7) Cleanup
