@@ -86,11 +86,7 @@ jobs:
       # 4) Install Dependencies (cached)
       # -----------------------------------------------------
       - name: Install dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-cache
-      - run: pip install -r requirements.txt
+        run: pip install -r requirements.txt
 
       # -----------------------------------------------------
       # 5) Run Ingestion (RAG)
