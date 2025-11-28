@@ -50,10 +50,10 @@ jobs:
           PINECONE_INDEX_NAME: ai
         run: |
           echo "Running ingest..."
-          python "RAG_Version 1.3/ingest.py"
+          python "Version/RAG_Version 1.3/ingest.py"
 
           echo "Running PR reviewer..."
-          python "RAG_Version 1.3/iterative_prompt_selector.py"
+          python "Version/RAG_Version 1.3/iterative_prompt_selector.py"
 
       # 7) Cleanup
       - name: Clean up cloned repo
