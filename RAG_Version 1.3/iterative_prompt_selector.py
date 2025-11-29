@@ -801,10 +801,9 @@ class IterativePromptSelector:
 
         if post_to_github:
             github_body = (
-                f"🤖 **AI Review**\n\n"
-                f"Prompt: `{selected_prompt}` | Score: **{score}/10**\n\n"
-                f"---\n{review_text}"
-            )
+                    f"🤖 **AI Review**\n\n"
+                    f"{review_text}"
+                )
             post_review_comment(owner, repo, pr_number, token, github_body)
 
         return {
