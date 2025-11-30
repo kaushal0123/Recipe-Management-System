@@ -32,20 +32,11 @@ jobs:
         with:
           python-version: "3.10"
 
-      # 4) Cache Python Dependencies
-      - name: Cache Python Dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      # 5) Install Dependencies
+      # 4) Install Dependencies
       - name: Install Dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r "RAG_Version 1.3/requirement.txt"
 
-      # 6) Run Ingestion + PR Reviewer
+      # 5) Run Ingestion + PR Reviewer
       - name: Run Ingestion and PR Reviewer
         env:
           OWNER: ${{ github.repository_owner }}
@@ -63,7 +54,7 @@ jobs:
           echo "Running PR reviewer..."
           python "RAG_Version 1.3/iterative_prompt_selector.py"
 
-      # 7) Cleanup
+      # 6) Cleanup
       - name: Clean Up Cloned Repository
         run: |
           echo "Cleaning repo_clone..."
