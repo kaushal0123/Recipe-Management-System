@@ -2,237 +2,379 @@
 #include <string>
 #include <fstream>
 #include <sstream>
+#include <vector>
+#include <algorithm>
+#include <cstdlib>
+#include <ctime>
 using namespace std;
-class recipe{
-    public :
-        string name;
-        string ingredients[100];
-        int calories;
-        string category;
-        recipe* next;
-        int n1;
-};
-void dis(string s1);
-void disp(recipe* current){
-    cout << "Ingredients Name : ";
-    for(int i=0;i<current->n1;i++){
-        cout << current->ingredients[i] << ",";
+
+class recipe {
+public:
+    string name;
+    string ingredients[100];
+    int calories;
+    string category;
+    recipe* next;
+    int n1;
+
+    recipe() {
+        next = nullptr;
+        n1 = 0;
+        calories = 0;
     }
-    cout << "\n";
-    cout << "Category : " << current->category << endl;
+};
+
+recipe* head = nullptr;
+recipe* tail = nullptr;
+
+void disp(recipe* current) {
+    cout << "Ingredients : ";
+    for (int i = 0; i < current->n1; i++) {
+        cout << current->ingredients[i];
+        if (i != current->n1 - 1) cout << ", ";
+    }
+    cout << "\nCategory : " << current->category << endl;
     cout << "Calories : " << current->calories << endl;
 }
-recipe* head=nullptr;
-recipe* tail=nullptr;
-void add(recipe* temp){
-    if(head==nullptr){
-        head=temp;
-        tail=temp;
-    }
-    else{
-        tail->next=temp;
-        tail=temp;
-        tail->next=nullptr;
+
+void add(recipe* temp) {
+    if (head == nullptr) {
+        head = tail = temp;
+    } else {
+        tail->next = temp;
+        tail = temp;
     }
 }
-void display(){
+
+// ----------------------------------------------
+//           BASIC EXISTING FUNCTIONS
+// ----------------------------------------------
+
+void display() {
     recipe* current = head;
-    while(current!=nullptr){
-        cout << "Recipe name : " << current->name << " Ingredients Name : ";
-        for(int i=0;i<current->n1;i++){
-            cout << current->ingredients[i] << ", ";
+    while (current != nullptr) {
+        cout << "Recipe : " << current->name << " | Ingredients : ";
+        for (int i = 0; i < current->n1; i++) {
+            cout << current->ingredients[i];
+            if (i != current->n1 - 1) cout << ", ";
         }
-        cout << "Calories : " << current->calories << " Category : " << current->category << endl;
-        current=current->next;
+        cout << " | Calories : " << current->calories
+             << " | Category : " << current->category << endl;
+        current = current->next;
     }
 }
-void search(string s){
-    recipe* current=head;
-    int flag1=0;
-    while(current!=nullptr){
-        int flag=0;
-        for(int i=0;i<current->n1;i++){
-            string s1=current->ingredients[i];
-            if(s==s1){
-                flag=1;
-                flag1=1;
+
+void search(string s) {
+    recipe* current = head;
+    bool found = false;
+
+    while (current != nullptr) {
+        for (int i = 0; i < current->n1; i++) {
+            if (current->ingredients[i] == s) {
+                cout << "\nYou can make: " << current->name << endl;
+                disp(current);
+                found = true;
                 break;
             }
         }
-        if(flag==1){
-            cout << "You can make : " << current->name << endl;
-            disp(current);
-            flag=1;
-        }
-        current=current->next;
+        current = current->next;
     }
-    if(flag1==0){
-        cout << "\nNo recipe has used this ingridientts is in our database" << endl;
-    }
+    if (!found)
+        cout << "\nNo recipe uses this ingredient.\n";
 }
-void dis(string s1){
-    recipe *current=head;
-    int flag=0;
-    while(current!=nullptr){
-        if(current->name==s1){
-            flag=1;
-            cout << "Ingredients Name : ";
-            for(int i=0;i<current->n1;i++){
-                cout << current->ingredients[i] << ",";
-            }
-            cout << "\n";
-            cout << "Category : " << current->category << endl;
-            cout << "Calories : " << current->calories << endl;
+
+void dis(string s1) {
+    recipe* current = head;
+    bool found = false;
+
+    while (current != nullptr) {
+        if (current->name == s1) {
+            found = true;
+            disp(current);
             break;
         }
-        current=current->next;
+        current = current->next;
     }
-    if(flag==0){
-        cout << "The recipe is not in our database" << endl;
-    }
+    if (!found)
+        cout << "The recipe is not in our database.\n";
 }
-void categ(string s){
-    recipe* current=head;
-    int flag=0;
-    while(current!=nullptr){
-        if(current->category==s){
-            cout << "You can make : " << current->name << endl;
+
+void categ(string s) {
+    recipe* current = head;
+    bool found = false;
+
+    while (current != nullptr) {
+        if (current->category == s) {
+            cout << "\nYou can make: " << current->name << endl;
             disp(current);
-            flag=1;
+            found = true;
         }
-        current=current->next;
+        current = current->next;
     }
-    if(flag==0){
-        cout << "Ther is no recipe with this category in our database" << endl;
-    }
+    if (!found)
+        cout << "There is no recipe with this category.\n";
 }
-void meal_planner(){
-    cout << "Enter all the three meals for breakfast lunch and dinner with entering after each input" << endl;
-    string s1;
-    string s2;
-    string s3;
-    cin >> s1;
-    cin >> s2;
-    cin >> s3;
-    cout << "Breakfast description : \n \n";
+
+void meal_planner() {
+    cout << "Enter breakfast, lunch & dinner recipe names:\n";
+    string s1, s2, s3;
+    cin >> s1 >> s2 >> s3;
+
+    cout << "\nBreakfast:\n";
     dis(s1);
-    cout << "\n \nLunch description : \n \n";
+    cout << "\nLunch:\n";
     dis(s2);
-    cout << "\n \nDinner description : \n \n";
+    cout << "\nDinner:\n";
     dis(s3);
 }
-void meal_dec(){
-    cout << "Can you please enter the range of calorie in which you want to enter in this format eg : \'100\' \'150\' with space between them : ";
-    int n1,n2;
-    cin >> n1 >> n2;
-    cout << "Enter the category of the food you want : ";
-    string s;
-    cin >> s;
-    int flag=0;
-    recipe* current=head;
-    while(current!=nullptr){
-        if(current->calories >= n1 && current->calories<=n2 && current->category==s){
-            cout << "You can make : " << current->name << endl;
+
+void meal_dec() {
+    int low, high;
+    string category;
+
+    cout << "Enter calorie range (low high): ";
+    cin >> low >> high;
+    cout << "Enter category: ";
+    cin >> category;
+
+    recipe* current = head;
+    bool found = false;
+    while (current != nullptr) {
+        if (current->calories >= low && current->calories <= high &&
+            current->category == category) {
+            cout << "\nYou can make: " << current->name << endl;
             disp(current);
-            flag=1;
+            found = true;
         }
-        current=current->next;
+        current = current->next;
     }
-    if(flag==0){
-        cout << "There is no kind of recipe you want in the database " << endl;
+
+    if (!found)
+        cout << "No recipe found in this range & category.\n";
+}
+
+// ----------------------------------------------
+//       🔥 NEW FEATURE 1: MULTI-INGREDIENT SEARCH
+// ----------------------------------------------
+
+void search_multi() {
+    int count;
+    cout << "Enter number of ingredients you have: ";
+    cin >> count;
+
+    vector<string> list(count);
+    cout << "Enter ingredients:\n";
+    for (int i = 0; i < count; i++) cin >> list[i];
+
+    recipe* current = head;
+    bool found = false;
+
+    while (current != nullptr) {
+        int match = 0;
+        for (string ing : list) {
+            for (int i = 0; i < current->n1; i++) {
+                if (ing == current->ingredients[i]) match++;
+            }
+        }
+        if (match == count) {
+            cout << "\nYou can make: " << current->name << endl;
+            disp(current);
+            found = true;
+        }
+        current = current->next;
+    }
+
+    if (!found)
+        cout << "\nNo recipe uses all these ingredients.\n";
+}
+
+// ----------------------------------------------
+//        🔥 NEW FEATURE 2: SORT BY CALORIES
+// ----------------------------------------------
+
+void sort_by_calories() {
+    vector<recipe*> arr;
+    recipe* cur = head;
+
+    while (cur != nullptr) {
+        arr.push_back(cur);
+        cur = cur->next;
+    }
+
+    sort(arr.begin(), arr.end(), [](recipe* a, recipe* b) {
+        return a->calories < b->calories;
+    });
+
+    cout << "\nRecipes sorted by calories:\n";
+    for (auto r : arr)
+        cout << r->name << " - " << r->calories << " cal\n";
+}
+
+// ----------------------------------------------
+// 🔥 NEW FEATURE 3: HEALTHY ALTERNATIVE
+// ----------------------------------------------
+
+void healthy_alternative(string dish) {
+    recipe* target = head;
+
+    while (target != nullptr && target->name != dish)
+        target = target->next;
+
+    if (!target) {
+        cout << "Recipe not found.\n";
+        return;
+    }
+
+    recipe* current = head;
+    recipe* best = nullptr;
+
+    while (current != nullptr) {
+        if (current->category == target->category &&
+            current->calories < target->calories) {
+            if (!best || current->calories > best->calories)
+                best = current;
+        }
+        current = current->next;
+    }
+
+    if (best) {
+        cout << "\nHealthier alternative to " << dish << ":\n";
+        disp(best);
+    } else {
+        cout << "\nNo healthier alternative available.\n";
     }
 }
-int main(){
-    int n;
-    ifstream file;
-    file.open("file.csv");
-    string line="";
-    while(getline(file,line)){
+
+// ----------------------------------------------
+//      🔥 NEW FEATURE 4: RANDOM SURPRISE
+// ----------------------------------------------
+
+void surprise_me() {
+    srand(time(0));
+
+    vector<recipe*> arr;
+    recipe* cur = head;
+    while (cur != nullptr) {
+        arr.push_back(cur);
+        cur = cur->next;
+    }
+
+    if (arr.size() == 0) {
+        cout << "No recipes in database.\n";
+        return;
+    }
+
+    int index = rand() % arr.size();
+    cout << "\nSurprise Recipe Suggestion:\n";
+    disp(arr[index]);
+}
+
+// ----------------------------------------------
+//                 MAIN PROGRAM
+// ----------------------------------------------
+
+int main() {
+    ifstream file("file.csv");
+    string line;
+
+    // Load from CSV
+    while (getline(file, line)) {
+        if (line.empty()) continue;
+
         recipe* temp = new recipe;
         stringstream input(line);
         string tem;
-        getline(input,temp->name,',');
-        getline(input,tem,',');
-        temp->n1=atoi(tem.c_str());
-        for(int i=0;i<temp->n1;i++){
-            getline(input,temp->ingredients[i],',');
+
+        getline(input, temp->name, ',');
+        getline(input, tem, ',');
+        temp->n1 = stoi(tem);
+
+        for (int i = 0; i < temp->n1; i++) {
+            getline(input, temp->ingredients[i], ',');
         }
-        tem="";
-        getline(input,tem,',');
-        temp->calories=atoi(tem.c_str());
-        getline(input,temp->category);
+
+        getline(input, tem, ',');
+        temp->calories = stoi(tem);
+
+        getline(input, temp->category);
+
         add(temp);
-        line="";
     }
     file.close();
-    cout << "Enter 1 to add recipe\nEnter 2 to display all recipe\nEnter 3 to find recipe which can be made using a particular ingredient\nEnter 4 to find using category\nEnter 5 to find details of a particular dish\nEnter 6 to plan a single meal for you if you are confused\nEnter 7 to plan your meal for a day\n0 to end\n";
+
+    int n;
+
+    cout << "\n=== Recipe Management System ===\n";
+    cout << "1 Add recipe\n2 Display all recipes\n3 Search by ingredient\n4 Search by category\n5 Show recipe details\n6 Smart meal suggestion\n7 Full day meal plan\n8 Multi-ingredient search\n9 Sort recipes by calories\n10 Healthy alternative\n11 Surprise recipe\n0 Exit\n";
+
     cin >> n;
-    while(n){
-        if(n==1){
-            cout << "Enter recipe name to be entered : ";
-             //Always enter the first letter capital in the word
-            recipe* temp=new recipe;
+
+    while (n != 0) {
+        if (n == 1) {
+            recipe* temp = new recipe;
+            cout << "Enter recipe name: ";
             cin >> temp->name;
-            cout << "Enter the no of ingredients requirded : ";
-            int n1;
-            cin >> n1;
-            temp->n1=n1;
-            cout << "Enter name of all the ingredients we need with entering enter after typing the name of each ingredients "<< endl;
-            for(int i=0;i<n1;i++){
-                 //Always enter the first letter capital in the word
+
+            cout << "Enter number of ingredients: ";
+            cin >> temp->n1;
+
+            cout << "Enter each ingredient:\n";
+            for (int i = 0; i < temp->n1; i++)
                 cin >> temp->ingredients[i];
-            }
-            cout << "Enter  no of calories of the recipe : ";
+
+            cout << "Enter calories: ";
             cin >> temp->calories;
-            cout << "Enter the category ofthe dish : ";
-             //Always enter the first letter capital in the word
+
+            cout << "Enter category: ";
             cin >> temp->category;
-            temp->next=nullptr;
-            ofstream file1;
-            file1.open("file.csv",ios::app);
-            line=temp->name+ "," + to_string(temp->n1) + ",";
-            for(int i=0;i<temp->n1;i++){
-                line=line + temp->ingredients[i] + ",";
-            }
-            line=line + to_string(temp->calories) + "," + temp->category;
-            file1 << "\n" << line ;
-            file1.close();
+
+            // Save to file
+            ofstream out("file.csv", ios::app);
+            out << "\n" << temp->name << "," << temp->n1 << ",";
+            for (int i = 0; i < temp->n1; i++)
+                out << temp->ingredients[i] << ",";
+            out << temp->calories << "," << temp->category;
+            out.close();
+
             add(temp);
         }
-        else if(n==2){
-            display();
-        }
-        else if(n==3){
-            cout << "Enter ingredient : ";
-             //Always enter the first letter capital in the word
+
+        else if (n == 2) display();
+        else if (n == 3) {
             string s;
+            cout << "Enter ingredient: ";
             cin >> s;
             search(s);
         }
-        else if(n==4){
-            string s1;
-            //Always enter the first letter capital in the word
-            cout << "Enter the category : ";
-            cin >> s1;
-            categ(s1);
+        else if (n == 4) {
+            string s;
+            cout << "Enter category: ";
+            cin >> s;
+            categ(s);
         }
-        else if(n==5){
-            string s1;
-            //Always enter the first letter capital
-            cout << "Enter the name of the recipe you want to find details of : ";
-            cin >> s1;
-            dis(s1);
+        else if (n == 5) {
+            string s;
+            cout << "Enter recipe name: ";
+            cin >> s;
+            dis(s);
         }
-        else if(n==6){
-            meal_dec();
+        else if (n == 6) meal_dec();
+        else if (n == 7) meal_planner();
+        else if (n == 8) search_multi();
+        else if (n == 9) sort_by_calories();
+        else if (n == 10) {
+            string d;
+            cout << "Enter dish name: ";
+            cin >> d;
+            healthy_alternative(d);
         }
-        else if(n==7){
-            meal_planner();
-        }
-        else{
-            cout << "Wrong choice";
-        }
-       cout << "Enter 1 to add recipe\nEnter 2 to display all recipe\nEnter 3 to find recipe which can be made using a particular ingredient\nEnter 4 to find using category\nEnter 5 to find details of a particular dish\nEnter 6 to plan a single meal for you if you are confused\nEnter 7 to plan your meal for a day\n0 to end\n";
-       cin >> n; 
+        else if (n == 11) surprise_me();
+        else cout << "Invalid choice.\n";
+
+        cout << "\n\n=== OPTIONS ===\n";
+        cout << "1 Add recipe\n2 Display all recipes\n3 Search by ingredient\n4 Search by category\n5 Recipe details\n6 Meal suggestion\n7 Day meal plan\n8 Multi-ingredient search\n9 Sort by calories\n10 Healthy alternative\n11 Surprise me!\n0 Exit\n";
+        cin >> n;
     }
+
+    return 0;
 }
