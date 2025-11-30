@@ -19,12 +19,12 @@ jobs:
       - name: Checkout Bot Repository
         uses: actions/checkout@v4
 
-      # 2) Clone Target Repository
-      # - name: Clone Target Repository
-      #   run: |
-      #     echo "Cloning PR repository..."
-      #     git clone https://github.com/${{ github.repository }} repo_clone
-      #     echo "Repository cloned at: repo_clone"
+      2) Clone Target Repository
+      - name: Clone Target Repository
+        run: |
+          echo "Cloning PR repository..."
+          git clone https://github.com/${{ github.repository }} repo_clone
+          echo "Repository cloned at: repo_clone"
 
       # 3) Set Up Python
       - name: Set Up Python
@@ -54,8 +54,8 @@ jobs:
           echo "Running PR reviewer..."
           python "RAG_Version 1.3/iterative_prompt_selector.py"
 
-      # 6) Cleanup
-      # - name: Clean Up Cloned Repository
-      #   run: |
-      #     echo "Cleaning repo_clone..."
-      #     rm -rf repo_clone
+      6) Cleanup
+      - name: Clean Up Cloned Repository
+        run: |
+          echo "Cleaning repo_clone..."
+          rm -rf repo_clone
