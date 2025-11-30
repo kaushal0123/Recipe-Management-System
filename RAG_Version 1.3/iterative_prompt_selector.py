@@ -527,7 +527,6 @@ from rag_core import get_retriever
 from utils import safe_truncate
 
 # >>> ADDED
-import sys    # added to receive shared repo path
 
 class IterativePromptSelector:
     def __init__(self):
@@ -555,12 +554,7 @@ class IterativePromptSelector:
         self.prompt_history = []
         self.score_history = []
 
-        # >>> ADDED: extract shared repo path (if provided)
-        if len(sys.argv) > 1:
-            self.shared_repo_path = sys.argv[1]
-            print(f"🔄 Shared repo path for static analysis: {self.shared_repo_path}")
-        else:
-            self.shared_repo_path = None
+        
 
 
     # ===========================================================
