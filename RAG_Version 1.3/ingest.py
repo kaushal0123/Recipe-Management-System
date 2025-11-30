@@ -131,6 +131,9 @@ def ingest_data():
     shutil.rmtree(LOCAL_REPO_PATH, onerror=on_rm_error)
     print("Done.")
 
+# ------------------------------------------------------------
+# FIX: Main block MUST come after function definition
+# ------------------------------------------------------------
 
 if __name__ == "__main__":
     if not all([OWNER, REPO, PINECONE_API_KEY, PINECONE_INDEX_NAME]):
@@ -138,7 +141,3 @@ if __name__ == "__main__":
         print("Please set OWNER, REPO, PINECONE_API_KEY, and PINECONE_INDEX_NAME")
     else:
         ingest_data()
-
-
-
-
