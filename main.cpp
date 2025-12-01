@@ -35,17 +35,17 @@ void add(recipe* temp){
         tail->next=nullptr;
     }
 }
-void display(){
-    recipe* current = head;
-    while(current!=nullptr){
-        cout << "Recipe name : " << current->name << " Ingredients Name : ";
-        for(int i=0;i<current->n1;i++){
-            cout << current->ingredients[i] << ", ";
-        }
-        cout << "Calories : " << current->calories << " Category : " << current->category << endl;
-        current=current->next;
-    }
-}
+// void display(){
+//     recipe* current = head;
+//     while(current!=nullptr){
+//         cout << "Recipe name : " << current->name << " Ingredients Name : ";
+//         for(int i=0;i<current->n1;i++){
+//             cout << current->ingredients[i] << ", ";
+//         }
+//         cout << "Calories : " << current->calories << " Category : " << current->category << endl;
+//         current=current->next;
+//     }
+// }
 void search(string s){
     recipe* current=head;
     int flag1=0;
